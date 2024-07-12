@@ -29,46 +29,69 @@ player_turn = 0
 blobs = [[None for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 dots = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 
+def explode(row, col, player):
+    blobs[row][col] = None
+    dots[row][col] = 0
+    neighbors = [
+        (row + 1, col),
+        (row - 1, col),
+        (row, col + 1),
+        (row, col - 1)
+    ]
+    for nr, nc in neighbors:
+        if 0 <= nr < NUM_ROWS and 0 <= nc < NUM_COLS:
+            blobs[nr][nc] = player
+            dots[nr][nc] += 1
+            if dots[nr][nc] == 4:
+                explode(nr, nc, player)
+
+def check_win():
+    blue_count = sum(blob == 0 for row in blobs for blob in row)
+    red_count = sum(blob == 1 for row in blobs for blob in row)
+    if blue_count == 0:
+        return "Red wins!"
+    elif red_count == 0:
+        return "Blue wins!"
+    return None
+
+def reset_game():
+    global blobs, dots, turn, player_turn
+    blobs = [[None for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
+    dots = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
+    turn = 0
+    player_turn = 0
+
 running = True
+win_message = None
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN and win_message is None:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             for row in range(NUM_ROWS):
                 for col in range(NUM_COLS):
                     x = PADDING + col * (square_width + PADDING)
                     y = PADDING + row * (square_height + PADDING)
                     if x <= mouse_x <= x + square_width and y <= mouse_y <= y + square_height:
-                        if blobs[row][col] is None:
+                        if blobs[row][col] is None and (turn == 0 or turn == 1):
                             if player_turn == turn % 2:
                                 blobs[row][col] = turn % 2
-                                dots[row][col] = 1
+                                dots[row][col] = 3
                                 turn += 1
                                 player_turn = 1 - player_turn
                         elif blobs[row][col] == turn % 2 and dots[row][col] < 3:
+                            turn += 1
                             dots[row][col] += 1
                         elif blobs[row][col] == turn % 2 and dots[row][col] == 3:
-                            blobs[row][col] = None
-                            dots[row][col] = 0
-                            neighbors = [
-                                (row + 1, col),
-                                (row, col - 1),
-                                (row, col + 1)
-                            ]
-                            for nr, nc in neighbors:
-                                if 0 <= nr < NUM_ROWS and 0 <= nc < NUM_COLS:
-                                    if blobs[nr][nc] is None:
-                                        blobs[nr][nc] = turn % 2
-                                        dots[nr][nc] = 1
-                                    elif blobs[nr][nc] == turn % 2:
-                                        dots[nr][nc] += 1
-                                    if dots[nr][nc] == 4:
-                                        blobs[nr][nc] = None
-                                        dots[nr][nc] = 0
+                            explode(row, col, turn % 2)
                             turn += 1
                             player_turn = 1 - player_turn
+                        if turn != 0 and turn != 1: win_message = check_win()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                reset_game()
+                win_message = None
 
     screen.fill(LIGHT_BLUE if turn % 2 == 0 else LIGHT_RED)
 
@@ -102,6 +125,16 @@ while running:
 
                 for pos in dot_positions:
                     pygame.draw.circle(screen, WHITE, pos, dot_radius)
+
+    if win_message:
+        font = pygame.font.SysFont(None, 75)
+        text = font.render(win_message, True, BLACK)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2))
+        screen.blit(text, text_rect)
+        sub_font = pygame.font.SysFont(None, 50)
+        sub_text = sub_font.render("Press R to restart", True, BLACK)
+        sub_text_rect = sub_text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50))
+        screen.blit(sub_text, sub_text_rect)
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
