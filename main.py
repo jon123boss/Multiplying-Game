@@ -29,9 +29,15 @@ player_turn = 0
 blobs = [[None for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 dots = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 
+explosions = []
+
+def animate_explosion(row, col):
+    explosions.append({'row': row, 'col': col, 'radius': 0, 'max_radius': square_width // 2})
+
 def explode(row, col, player):
     blobs[row][col] = None
     dots[row][col] = 0
+    animate_explosion(row, col)
     neighbors = [
         (row + 1, col),
         (row - 1, col),
@@ -126,6 +132,15 @@ while running:
                 for pos in dot_positions:
                     pygame.draw.circle(screen, WHITE, pos, dot_radius)
 
+    # Handle and render explosion animations
+    for explosion in explosions[:]:
+        x = PADDING + explosion['col'] * (square_width + PADDING) + square_width // 2
+        y = PADDING + explosion['row'] * (square_height + PADDING) + square_height // 2
+        pygame.draw.circle(screen, WHITE, (x, y), explosion['radius'], 2)
+        explosion['radius'] += 5
+        if explosion['radius'] > explosion['max_radius']:
+            explosions.remove(explosion)
+
     if win_message:
         font = pygame.font.SysFont(None, 75)
         text = font.render(win_message, True, BLACK)
@@ -141,3 +156,6 @@ while running:
 
 pygame.quit()
 sys.exit()
+
+_____
+Explosion animations
