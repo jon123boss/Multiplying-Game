@@ -22,11 +22,9 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Multiplying game")
 
 blob_size = min(square_width, square_height) / 2
-blob_color = LIGHT_BLUE
+dot_radius = 8
 turn = 0
 player_turn = 0
-
-dot_radius = 8
 
 blobs = [[None for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 dots = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
@@ -43,29 +41,36 @@ while running:
                     x = PADDING + col * (square_width + PADDING)
                     y = PADDING + row * (square_height + PADDING)
                     if x <= mouse_x <= x + square_width and y <= mouse_y <= y + square_height:
-                        if blobs[row][col] is None and (turn == 0 or turn == 1):
+                        if blobs[row][col] is None:
                             if player_turn == turn % 2:
                                 blobs[row][col] = turn % 2
-                                dots[row][col] = 3
+                                dots[row][col] = 1
                                 turn += 1
                                 player_turn = 1 - player_turn
                         elif blobs[row][col] == turn % 2 and dots[row][col] < 3:
                             dots[row][col] += 1
                         elif blobs[row][col] == turn % 2 and dots[row][col] == 3:
-                            blobs[row + 1][col] = turn % 2
-                            blobs[row - 1][col] = turn % 2
-                            blobs[row][col + 1] = turn % 2
-                            blobs[row][col - 1] = turn % 2
+                            blobs[row][col] = None
+                            dots[row][col] = 0
+                            neighbors = [
+                                (row + 1, col),
+                                (row, col - 1),
+                                (row, col + 1)
+                            ]
+                            for nr, nc in neighbors:
+                                if 0 <= nr < NUM_ROWS and 0 <= nc < NUM_COLS:
+                                    if blobs[nr][nc] is None:
+                                        blobs[nr][nc] = turn % 2
+                                        dots[nr][nc] = 1
+                                    elif blobs[nr][nc] == turn % 2:
+                                        dots[nr][nc] += 1
+                                    if dots[nr][nc] == 4:
+                                        blobs[nr][nc] = None
+                                        dots[nr][nc] = 0
+                            turn += 1
+                            player_turn = 1 - player_turn
 
-                            dots[row + 1][col] += 1
-                            dots[row - 1][col] += 1
-                            dots[row][col + 1] += 1
-                            dots[row][col - 1] += 1
-
-    if turn % 2 == 0:
-        screen.fill(LIGHT_BLUE)
-    else:
-        screen.fill(LIGHT_RED)
+    screen.fill(LIGHT_BLUE if turn % 2 == 0 else LIGHT_RED)
 
     for row in range(NUM_ROWS):
         for col in range(NUM_COLS):
@@ -76,24 +81,27 @@ while running:
 
             if blobs[row][col] is not None:
                 blob_color = LIGHT_BLUE if blobs[row][col] == 0 else LIGHT_RED
-                blob_x = x + square_width // 2 - blob_size // 2
-                blob_y = y + square_height // 2 - blob_size // 2
+                blob_x = x + (square_width - blob_size) // 2
+                blob_y = y + (square_height - blob_size) // 2
                 pygame.draw.rect(screen, blob_color, (blob_x, blob_y, blob_size, blob_size), border_radius=RADIUS)
 
-                for dot in range(dots[row][col]):
-                    if dots[row][col] == 1:
-                        pygame.draw.circle(screen, WHITE, (blob_x + blob_size // 2, blob_y + blob_size // 2), dot_radius)
-                    elif dots[row][col] == 2:
-                        for i in range(2):
-                            dot_x = blob_x + blob_size // 2 + i * 20 - 10
-                            dot_y = blob_y + blob_size // 2
-                            pygame.draw.circle(screen, WHITE, (dot_x, dot_y), dot_radius)
-                    elif dots[row][col] == 3:
-                        for i in range(2):
-                            dot_x = blob_x + blob_size // 2 + i * 20 - 10
-                            dot_y = blob_y + blob_size // 2 + 10
-                            pygame.draw.circle(screen, WHITE, (dot_x, dot_y), dot_radius)
-                        pygame.draw.circle(screen, WHITE, (blob_x + blob_size // 2, blob_y + blob_size // 2 - 10), dot_radius)
+                dot_positions = []
+                if dots[row][col] == 1:
+                    dot_positions = [(blob_x + blob_size // 2, blob_y + blob_size // 2)]
+                elif dots[row][col] == 2:
+                    dot_positions = [
+                        (blob_x + blob_size // 2 - 10, blob_y + blob_size // 2),
+                        (blob_x + blob_size // 2 + 10, blob_y + blob_size // 2)
+                    ]
+                elif dots[row][col] == 3:
+                    dot_positions = [
+                        (blob_x + blob_size // 2 - 10, blob_y + blob_size // 2 + 5),
+                        (blob_x + blob_size // 2 + 10, blob_y + blob_size // 2 + 5),
+                        (blob_x + blob_size // 2, blob_y + blob_size // 2 - 10)
+                    ]
+
+                for pos in dot_positions:
+                    pygame.draw.circle(screen, WHITE, pos, dot_radius)
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
