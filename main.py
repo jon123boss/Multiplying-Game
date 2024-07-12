@@ -26,6 +26,8 @@ blob_color = LIGHT_BLUE
 turn = 0
 player_turn = 0
 
+dot_radius = 8
+
 blobs = [[None for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 dots = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
 
@@ -41,13 +43,24 @@ while running:
                     x = PADDING + col * (square_width + PADDING)
                     y = PADDING + row * (square_height + PADDING)
                     if x <= mouse_x <= x + square_width and y <= mouse_y <= y + square_height:
-                        if blobs[row][col] is None:
+                        if blobs[row][col] is None and (turn == 0 or turn == 1):
                             if player_turn == turn % 2:
                                 blobs[row][col] = turn % 2
+                                dots[row][col] = 3
                                 turn += 1
                                 player_turn = 1 - player_turn
                         elif blobs[row][col] == turn % 2 and dots[row][col] < 3:
                             dots[row][col] += 1
+                        elif blobs[row][col] == turn % 2 and dots[row][col] == 3:
+                            blobs[row + 1][col] = turn % 2
+                            blobs[row - 1][col] = turn % 2
+                            blobs[row][col + 1] = turn % 2
+                            blobs[row][col - 1] = turn % 2
+
+                            dots[row + 1][col] += 1
+                            dots[row - 1][col] += 1
+                            dots[row][col + 1] += 1
+                            dots[row][col - 1] += 1
 
     if turn % 2 == 0:
         screen.fill(LIGHT_BLUE)
@@ -68,9 +81,19 @@ while running:
                 pygame.draw.rect(screen, blob_color, (blob_x, blob_y, blob_size, blob_size), border_radius=RADIUS)
 
                 for dot in range(dots[row][col]):
-                    dot_x = blob_x + blob_size // 2
-                    dot_y = blob_y + blob_size // 2 - (dots[row][col] - 1) * 5 + dot * 10
-                    pygame.draw.circle(screen, WHITE, (dot_x, dot_y), 5)
+                    if dots[row][col] == 1:
+                        pygame.draw.circle(screen, WHITE, (blob_x + blob_size // 2, blob_y + blob_size // 2), dot_radius)
+                    elif dots[row][col] == 2:
+                        for i in range(2):
+                            dot_x = blob_x + blob_size // 2 + i * 20 - 10
+                            dot_y = blob_y + blob_size // 2
+                            pygame.draw.circle(screen, WHITE, (dot_x, dot_y), dot_radius)
+                    elif dots[row][col] == 3:
+                        for i in range(2):
+                            dot_x = blob_x + blob_size // 2 + i * 20 - 10
+                            dot_y = blob_y + blob_size // 2 + 10
+                            pygame.draw.circle(screen, WHITE, (dot_x, dot_y), dot_radius)
+                        pygame.draw.circle(screen, WHITE, (blob_x + blob_size // 2, blob_y + blob_size // 2 - 10), dot_radius)
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
